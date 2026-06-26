@@ -64906,7 +64906,7 @@ async function decryptField(encryptedStr, key) {
     const encryptedObj = JSON.parse(encryptedStr);
     return await decryptData(encryptedObj, key);
   } catch (e2) {
-    logger.error("Decryption failed", e2);
+    logger.warn("Decryption failed for a database field (likely due to an ENCRYPTION_KEY change or corrupted data).");
     return null;
   }
 }
