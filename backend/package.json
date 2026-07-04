@@ -9,6 +9,7 @@
     "build:netlify": "node scripts/build-netlify.js",
     "build:vercel": "node scripts/build-vercel.js",
     "build:edgeone": "node scripts/build-edgeone.js",
+    "build:deno": "node scripts/build-deno.js",
     "test": "vitest run"
   },
   "dependencies": {

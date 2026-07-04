@@ -64,3 +64,4 @@ netlify.toml
 vercel.json
 README*.md
 wrangler*.toml
+deno.json

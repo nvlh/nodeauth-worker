@@ -66,3 +66,4 @@ example.dev.vars
 vercel.json
 README*.md
 wrangler*.toml
+deno.json

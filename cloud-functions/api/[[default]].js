@@ -89482,6 +89482,225 @@ function drizzle3(...params) {
   drizzle22.mock = mock;
 })(drizzle3 || (drizzle3 = {}));
 
+// node_modules/drizzle-orm/sqlite-proxy/session.js
+var SQLiteRemoteSession = class extends SQLiteSession {
+  constructor(client, dialect, schema, batchCLient, options = {}) {
+    super(dialect);
+    this.client = client;
+    this.schema = schema;
+    this.batchCLient = batchCLient;
+    this.logger = options.logger ?? new NoopLogger();
+    this.cache = options.cache ?? new NoopCache();
+  }
+  static [entityKind] = "SQLiteRemoteSession";
+  logger;
+  cache;
+  prepareQuery(query, fields, executeMethod, isResponseInArrayMode, customResultMapper, queryMetadata, cacheConfig) {
+    return new RemotePreparedQuery(
+      this.client,
+      query,
+      this.logger,
+      this.cache,
+      queryMetadata,
+      cacheConfig,
+      fields,
+      executeMethod,
+      isResponseInArrayMode,
+      customResultMapper
+    );
+  }
+  async batch(queries) {
+    const preparedQueries = [];
+    const builtQueries = [];
+    for (const query of queries) {
+      const preparedQuery = query._prepare();
+      const builtQuery = preparedQuery.getQuery();
+      preparedQueries.push(preparedQuery);
+      builtQueries.push({ sql: builtQuery.sql, params: builtQuery.params, method: builtQuery.method });
+    }
+    const batchResults = await this.batchCLient(builtQueries);
+    return batchResults.map((result, i2) => preparedQueries[i2].mapResult(result, true));
+  }
+  async transaction(transaction, config) {
+    const tx = new SQLiteProxyTransaction("async", this.dialect, this, this.schema);
+    await this.run(sql.raw(`begin${config?.behavior ? " " + config.behavior : ""}`));
+    try {
+      const result = await transaction(tx);
+      await this.run(sql`commit`);
+      return result;
+    } catch (err) {
+      await this.run(sql`rollback`);
+      throw err;
+    }
+  }
+  extractRawAllValueFromBatchResult(result) {
+    return result.rows;
+  }
+  extractRawGetValueFromBatchResult(result) {
+    return result.rows[0];
+  }
+  extractRawValuesValueFromBatchResult(result) {
+    return result.rows;
+  }
+};
+var SQLiteProxyTransaction = class _SQLiteProxyTransaction extends SQLiteTransaction {
+  static [entityKind] = "SQLiteProxyTransaction";
+  async transaction(transaction) {
+    const savepointName = `sp${this.nestedIndex}`;
+    const tx = new _SQLiteProxyTransaction("async", this.dialect, this.session, this.schema, this.nestedIndex + 1);
+    await this.session.run(sql.raw(`savepoint ${savepointName}`));
+    try {
+      const result = await transaction(tx);
+      await this.session.run(sql.raw(`release savepoint ${savepointName}`));
+      return result;
+    } catch (err) {
+      await this.session.run(sql.raw(`rollback to savepoint ${savepointName}`));
+      throw err;
+    }
+  }
+};
+var RemotePreparedQuery = class extends SQLitePreparedQuery {
+  constructor(client, query, logger3, cache, queryMetadata, cacheConfig, fields, executeMethod, _isResponseInArrayMode, customResultMapper) {
+    super("async", executeMethod, query, cache, queryMetadata, cacheConfig);
+    this.client = client;
+    this.logger = logger3;
+    this.fields = fields;
+    this._isResponseInArrayMode = _isResponseInArrayMode;
+    this.customResultMapper = customResultMapper;
+    this.customResultMapper = customResultMapper;
+    this.method = executeMethod;
+  }
+  static [entityKind] = "SQLiteProxyPreparedQuery";
+  method;
+  getQuery() {
+    return { ...this.query, method: this.method };
+  }
+  async run(placeholderValues) {
+    const params = fillPlaceholders(this.query.params, placeholderValues ?? {});
+    this.logger.logQuery(this.query.sql, params);
+    return await this.queryWithCache(this.query.sql, params, async () => {
+      return await this.client(this.query.sql, params, "run");
+    });
+  }
+  mapAllResult(rows, isFromBatch) {
+    if (isFromBatch) {
+      rows = rows.rows;
+    }
+    if (!this.fields && !this.customResultMapper) {
+      return rows;
+    }
+    if (this.customResultMapper) {
+      return this.customResultMapper(rows);
+    }
+    return rows.map((row) => {
+      return mapResultRow(
+        this.fields,
+        row,
+        this.joinsNotNullableMap
+      );
+    });
+  }
+  async all(placeholderValues) {
+    const { query, logger: logger3, client } = this;
+    const params = fillPlaceholders(query.params, placeholderValues ?? {});
+    logger3.logQuery(query.sql, params);
+    const { rows } = await this.queryWithCache(query.sql, params, async () => {
+      return await client(query.sql, params, "all");
+    });
+    return this.mapAllResult(rows);
+  }
+  async get(placeholderValues) {
+    const { query, logger: logger3, client } = this;
+    const params = fillPlaceholders(query.params, placeholderValues ?? {});
+    logger3.logQuery(query.sql, params);
+    const clientResult = await this.queryWithCache(query.sql, params, async () => {
+      return await client(query.sql, params, "get");
+    });
+    return this.mapGetResult(clientResult.rows);
+  }
+  mapGetResult(rows, isFromBatch) {
+    if (isFromBatch) {
+      rows = rows.rows;
+    }
+    const row = rows;
+    if (!this.fields && !this.customResultMapper) {
+      return row;
+    }
+    if (!row) {
+      return void 0;
+    }
+    if (this.customResultMapper) {
+      return this.customResultMapper([rows]);
+    }
+    return mapResultRow(
+      this.fields,
+      row,
+      this.joinsNotNullableMap
+    );
+  }
+  async values(placeholderValues) {
+    const params = fillPlaceholders(this.query.params, placeholderValues ?? {});
+    this.logger.logQuery(this.query.sql, params);
+    const clientResult = await this.queryWithCache(this.query.sql, params, async () => {
+      return await this.client(this.query.sql, params, "values");
+    });
+    return clientResult.rows;
+  }
+  /** @internal */
+  isResponseInArrayMode() {
+    return this._isResponseInArrayMode;
+  }
+};
+
+// node_modules/drizzle-orm/sqlite-proxy/driver.js
+var SqliteRemoteDatabase = class extends BaseSQLiteDatabase {
+  static [entityKind] = "SqliteRemoteDatabase";
+  async batch(batch) {
+    return this.session.batch(batch);
+  }
+};
+function drizzle4(callback, batchCallback, config) {
+  const dialect = new SQLiteAsyncDialect({ casing: config?.casing });
+  let logger3;
+  let cache;
+  let _batchCallback;
+  let _config = {};
+  if (batchCallback) {
+    if (typeof batchCallback === "function") {
+      _batchCallback = batchCallback;
+      _config = config ?? {};
+    } else {
+      _batchCallback = void 0;
+      _config = batchCallback;
+    }
+    if (_config.logger === true) {
+      logger3 = new DefaultLogger();
+    } else if (_config.logger !== false) {
+      logger3 = _config.logger;
+      cache = _config.cache;
+    }
+  }
+  let schema;
+  if (_config.schema) {
+    const tablesConfig = extractTablesRelationalConfig(
+      _config.schema,
+      createTableRelationsHelpers
+    );
+    schema = {
+      fullSchema: _config.schema,
+      schema: tablesConfig.tables,
+      tableNamesMap: tablesConfig.tableNamesMap
+    };
+  }
+  const session = new SQLiteRemoteSession(callback, dialect, schema, _batchCallback, { logger: logger3, cache });
+  const db = new SqliteRemoteDatabase("async", dialect, session, schema);
+  db.$cache = cache;
+  if (db.$cache) {
+    db.$cache["invalidate"] = cache?.onMutate;
+  }
+  return db;
+}
+
 // src/shared/db/sqliteExecutor.ts
 var SqliteExecutor = class {
   constructor(db) {
@@ -89579,6 +89798,56 @@ var PgExecutor = class {
   }
 };
 
+// src/shared/db/d1HttpExecutor.ts
+var D1HttpExecutor = class {
+  constructor(proxyUrl, proxyToken) {
+    this.proxyUrl = proxyUrl;
+    this.proxyToken = proxyToken;
+  }
+  proxyUrl;
+  proxyToken;
+  engine = "cloudflared1";
+  async sendRequest(body) {
+    const response = await fetch(this.proxyUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this.proxyToken}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      throw new Error(`D1 Proxy Error: ${await response.text()}`);
+    }
+    return await response.json();
+  }
+  async exec(sql2) {
+    await this.sendRequest({ sql: sql2, method: "run" });
+  }
+  prepare(sql2) {
+    return {
+      get: async (...params) => {
+        const res = await this.sendRequest({ sql: sql2, params, method: "get" });
+        return res.rows && res.rows.length > 0 ? res.rows[0] : void 0;
+      },
+      run: async (...params) => {
+        await this.sendRequest({ sql: sql2, params, method: "run" });
+      }
+    };
+  }
+  async batch(sqls) {
+    if (sqls.length === 0) return;
+    const batchPayload = sqls.map((sql2) => ({ sql: sql2, params: [] }));
+    await this.sendRequest({ batch: batchPayload });
+  }
+  getProxyClient() {
+    return async (sql2, params, method) => {
+      const data = await this.sendRequest({ sql: sql2, params, method });
+      return { rows: data.rows || [] };
+    };
+  }
+};
+
 // src/shared/db/factory.ts
 import fs2 from "fs";
 import path4 from "path";
@@ -89607,6 +89876,17 @@ var DbFactory = class {
         const executor = new PgExecutor(config);
         const db = drizzle3(executor.pool, { schema: pg_exports });
         return { executor, db, schema: pg_exports };
+      }
+      case "cloudflared1": {
+        const proxyUrl = process.env.D1_PROXY_URL;
+        const proxyToken = process.env.D1_PROXY_TOKEN;
+        if (!proxyUrl || !proxyToken) {
+          throw new Error("D1_PROXY_URL and D1_PROXY_TOKEN are required for cloudflared1 engine");
+        }
+        logger2.info(`[Database] Engine: Cloudflare D1 Proxy via ${proxyUrl}`);
+        const executor = new D1HttpExecutor(proxyUrl, proxyToken);
+        const db = drizzle4(executor.getProxyClient(), { schema: sqlite_exports });
+        return { executor, db, schema: sqlite_exports };
       }
       case "sqlite":
       default: {

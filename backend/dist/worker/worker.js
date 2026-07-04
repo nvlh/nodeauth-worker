@@ -58666,7 +58666,7 @@ init_logger();
 
 // src/shared/db/dialects.ts
 function transformSqlForDialect(sql2, engine2) {
-  if (engine2 === "sqlite" || engine2 === "d1") return sql2;
+  if (engine2 === "sqlite" || engine2 === "d1" || engine2 === "cloudflared1") return sql2;
   let res = sql2;
   if (engine2 === "mysql") {
     res = res.replace(/\bINTEGER PRIMARY KEY AUTOINCREMENT\b/gi, "BIGINT AUTO_INCREMENT PRIMARY KEY");

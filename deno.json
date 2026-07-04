@@ -1,0 +1,17 @@
+{
+  "nodeModulesDir": "auto",
+  "deploy": {
+    "project": "nodeauth-worker",
+    "org": "nodeauth",
+    "entrypoint": "backend/dist/deno/deno.js",
+    "include": [
+      "deno.json",
+      "backend/dist/deno/deno.js",
+      "package.json",
+      "package-lock.json",
+      "node_modules/",
+      "frontend/",
+      "scripts/inject_vars.js"
+    ]
+  }
+}

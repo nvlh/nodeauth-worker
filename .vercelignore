@@ -64,3 +64,4 @@ example.dev.vars
 netlify.toml
 README*.md
 wrangler*.toml
+deno.json

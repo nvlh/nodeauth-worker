@@ -24,6 +24,7 @@ const PLATFORM_REGISTRY = [
     { name: 'Vercel', suffix: 'vercel', envKeys: ['VERCEL', 'VERCEL_PROJECT_ID'] },
     { name: 'Docker', suffix: 'docker', envKeys: ['DOCKER_BUILD'] },
     { name: 'EdgeOne Pages', suffix: 'edgeone', envKeys: ['EDGEONE_PAGES_PROJECT_NAME'] },
+    { name: 'Deno Deploy', suffix: 'deno', envKeys: ['DENO_DEPLOYMENT_ID', 'DENO_REGION'] },
     { name: 'Cloudflare Workers', suffix: 'cloudflare', envKeys: [] },
 ];
 

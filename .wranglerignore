@@ -4,3 +4,4 @@ backend/dist/docker/
 backend/dist/netlify/
 backend/dist/vercel/
 backend/dist/edgeone/
+backend/dist/deno/
