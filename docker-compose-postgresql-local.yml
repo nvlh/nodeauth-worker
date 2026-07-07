@@ -21,7 +21,7 @@ services:
       - "3000:3000"
     environment:
       # =========== 数据库引擎 ===========
-      # [必填] 支持 sqlite mysql postgresql，默认 sqlite
+      # [必填] 数据库引擎类型，支持：postgresql, postgres
       - DB_ENGINE=postgresql
       - DB_HOST=postgres-db
       - DB_PORT=5432

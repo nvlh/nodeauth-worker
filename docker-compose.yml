@@ -9,8 +9,12 @@ services:
       - ./data:/app/data
     environment:
       # =========== 数据库引擎 ===========
-      # [必填] 支持 sqlite mysql postgresql，默认 sqlite
+      # [必填] 数据库引擎类型，支持：sqlite, libsql, d1；默认：sqlite
       - DB_ENGINE=sqlite
+      # [选填] 远程云数据库连接 URL, 当连接远程数据库时使用
+      # - DB_URL=
+      # [选填] 当连接远程云数据库需要鉴权时填写，如使用 Turso 或 Cloudflare D1 Proxy 时必填
+      # - DB_TOKEN=
 
       # =========== 核心安全参数 ===========
       # [必填] NodeAuth 授权码

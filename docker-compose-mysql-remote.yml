@@ -7,14 +7,18 @@ services:
       - "3000:3000"
     environment:
       # =========== 数据库引擎 ===========
-      # [必填] 支持 sqlite mysql postgresql，默认 sqlite
+      # [必填] 数据库引擎类型，仅支持：mysql
       - DB_ENGINE=mysql
-      - DB_HOST=
-      - DB_PORT=
-      - DB_USER=
-      - DB_PASSWORD=
-      - DB_NAME=
-      - DB_SSL=false
+      # [必填] [二选一] 数据库连接配置
+      # 方式一 [优先]：使用 DB_URL 完整连接字符串
+      # - DB_URL=
+      # 方式二 [备选]：当未填写 DB_URL 时，使用下方参数单独配置
+      # - DB_HOST=
+      # - DB_PORT=
+      # - DB_USER=
+      # - DB_PASSWORD=
+      # - DB_NAME=
+      # - DB_SSL=true
 
       # =========== 核心安全参数 ===========
       # [必填] NodeAuth 授权码
