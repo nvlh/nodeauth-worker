@@ -28,6 +28,7 @@ const PLATFORM_REGISTRY = [
     { name: 'Aliyun ESA', suffix: 'esa', match: (env) => env.ALIYUN_ESA },
     { name: 'Deno Deploy', suffix: 'deno', match: (env) => env.DENO_DEPLOYMENT_ID || env.DENO_REGION },
     { name: 'Wasmer Edge', suffix: 'wasmer', match: (env) => env.WASMER_TOKEN },
+    { name: 'Prisma Compute', suffix: 'prisma', match: (env) => env.PRISMA_SERVICE_TOKEN || env.PRISMA_APP_NAME },
     { name: 'Docker', suffix: 'docker', match: (env) => env.DOCKER_BUILD || env.KUBERNETES_SERVICE_HOST },
     { name: 'Cloudflare Workers', suffix: 'cloudflare', match: () => true }, // Fallback
 ];

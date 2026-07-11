@@ -7,8 +7,17 @@ const defaultFiles = [
     'package.json'
 ];
 
-// 允许通过环境变量指定单个文件，否则使用默认列表
-const configFiles = process.env.CONFIG_FILE ? [process.env.CONFIG_FILE] : defaultFiles;
+// 解析命令行参数，例如 --configfile=package.json (忽略大小写)
+const args = process.argv.slice(2);
+let argConfigFile = null;
+for (const arg of args) {
+    if (arg.toLowerCase().startsWith('--configfile=')) {
+        argConfigFile = arg.split('=')[1];
+    }
+}
+
+// 允许通过命令行参数或环境变量指定单个文件，否则使用默认列表
+const configFiles = argConfigFile ? [argConfigFile] : (process.env.CONFIG_FILE ? [process.env.CONFIG_FILE] : defaultFiles);
 
 const appName = process.env.WASMER_APP_NAME;
 const owner = process.env.WASMER_OWNER;

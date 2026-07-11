@@ -38,6 +38,9 @@ jobs:
           WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
           WASMER_OWNER: ${{ secrets.WASMER_OWNER }}
 
+      - name: Inject Commit Hash & Platform
+        run: node scripts/inject_vars.js --platform=wasmer
+
       - name: Update Wasmer Configuration
         run: |
           node scripts/update_wasmer.js
